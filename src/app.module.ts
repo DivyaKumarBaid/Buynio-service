@@ -4,6 +4,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { UtilModule } from './util/util.module';
 import { MailModule } from './mail/mail.module';
+import { HopsModule } from './hops/hops.module';
+import { UserService } from './user/user.service';
+import { UserController } from './user/user.controller';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -13,9 +17,11 @@ import { MailModule } from './mail/mail.module';
       isGlobal: true
     }),
     UtilModule,
-    MailModule
+    MailModule,
+    HopsModule,
+    UserModule
   ],
-  controllers: [],
-  providers: [],
+  controllers: [UserController],
+  providers: [UserService],
 })
 export class AppModule { }

@@ -1,6 +1,7 @@
 generator client {
-  provider      = "prisma-client-js"
+  provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -24,12 +25,40 @@ model Users {
   username     String
   password     String
   hashRT       String?
-  role         String   @default("user")
+  role         Role     @default(USER)
   signInMethod String   @default("local.com")
+  onBoarded    Boolean  @default(false)
+  hops         Hops[]
+}
+
+model Hops {
+  id               Int      @id @default(autoincrement())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  owner            Users    @relation(fields: [ownerId], references: [id])
+  ownerId          Int
+  name             String
+  logo             String?
+  instagramAccount String
+  otherReachout    String?
+  descrtiption     String   @default("")
+  motto            String   @default("")
+  category         Category
+  verified         Boolean  @default(false)
 }
 
 model PasswordOtp {
   id        Int    @id @default(autoincrement())
   hashOtp   String
   user_mail String @unique
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Category {
+  CLOTH
+  ELECTRONICS
 }
