@@ -13,4 +13,11 @@ export class UserController {
       const user = req.user;
       return await this.userService.getUser(user["sub"]);
     }
+
+    @UseGuards(AuthGuard("jwt"))
+    @Get("/onBoarding")
+    async toggleOnBoarding(@Req() req: Request) {
+      const user = req.user;
+      return await this.userService.toggleOnBoarding(user["sub"]);
+    }
 }

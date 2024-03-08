@@ -27,4 +27,22 @@ export class UserService {
       );
     }
   }
+
+  async toggleOnBoarding(id: number) {
+    try {
+      return await this.prismaService.users.update({
+        where: {
+          id,
+        },
+        data: {
+          onBoarded: true,
+        },
+      });
+    } catch (_) {
+      throw new HttpException(
+        "Internal Server Error",
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
 }
