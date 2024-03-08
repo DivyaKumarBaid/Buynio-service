@@ -1,5 +1,5 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { PrismaService } from "src/prisma/prisma.service";
 import {
   OTPAuthDto,
   OtpPasswordDto,
@@ -7,13 +7,13 @@ import {
   SigninAuthDto,
   SignupAuthDto,
   SigninGoogleAuthDto,
-} from './dto';
-import { UtilService } from 'src/util/util.service';
-import * as argon from 'argon2';
-import { MailService } from 'src/mail/mail.service';
-import { Unverified_User_Type } from 'src/types/user.types';
-import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
+} from "./dto";
+import { UtilService } from "src/util/util.service";
+import * as argon from "argon2";
+import { MailService } from "src/mail/mail.service";
+import { Unverified_User_Type } from "src/types/user.types";
+import { ConfigService } from "@nestjs/config";
+import { OAuth2Client } from "google-auth-library";
 
 @Injectable()
 export class AuthService {
@@ -22,10 +22,10 @@ export class AuthService {
     private prismaService: PrismaService,
     private utility: UtilService,
     private mailer: MailService,
-    private config: ConfigService,
+    private config: ConfigService
   ) {
     this.admin = new OAuth2Client({
-      clientId: this.config.get('GOOGLE_CLIENT_ID'),
+      clientId: this.config.get("GOOGLE_CLIENT_ID"),
     }); // GOOGLE_CLIENT_ID must be same as frontend
   }
 
@@ -63,7 +63,7 @@ export class AuthService {
         email: dto.email,
       },
     });
-    if (preExist) throw new HttpException('Already Exist', HttpStatus.CONFLICT);
+    if (preExist) throw new HttpException("Already Exist", HttpStatus.CONFLICT);
     const reSend = await this.prismaService.unverified_Users.findUnique({
       where: {
         email: dto.email,
@@ -134,7 +134,7 @@ export class AuthService {
         email: dto.email,
       },
     });
-    if (!user) throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
+    if (!user) throw new HttpException("Not Found", HttpStatus.NOT_FOUND);
 
     const otp = String(await this.utility.generateOtp());
     const hashOtp = await this.utility.hashData(otp);
@@ -149,10 +149,10 @@ export class AuthService {
     });
 
     if (!newPassOtp)
-      if (!user) throw new HttpException('Not Found', HttpStatus.NOT_FOUND);
+      if (!user) throw new HttpException("Not Found", HttpStatus.NOT_FOUND);
 
     return {
-      message: 'Email Sent',
+      message: "Email Sent",
     };
   }
 
@@ -164,7 +164,7 @@ export class AuthService {
     });
     const isOtp = await argon.verify(passOtp.hashOtp, dto.otp);
     if (!isOtp)
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
 
     const password = await argon.hash(dto.password);
     const user = await this.prismaService.users.update({
@@ -177,8 +177,8 @@ export class AuthService {
     });
     if (!user)
       throw new HttpException(
-        'Internal Server Error',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        "Internal Server Error",
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     await this.prismaService.passwordOtp.delete({
       where: {
@@ -194,11 +194,11 @@ export class AuthService {
         email: dto.email,
       },
     });
-    if (!user) throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    if (!user) throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
 
     // verify user's password
     const isUser = await argon.verify(user.password, dto.password);
-    if (!isUser) throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    if (!isUser) throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
 
     const tokens = await this.utility.getToken(user.id, user.email);
     await this.updateRtHash(user.id, tokens.refresh_token);
@@ -211,24 +211,26 @@ export class AuthService {
     try {
       const ticket = await this.admin.verifyIdToken({
         idToken: dto.token,
-        audience: this.config.get('GOOGLE_CLIENT_ID'),
+        audience: this.config.get("GOOGLE_CLIENT_ID"),
       });
       const decodedToken = ticket.getPayload();
       var user = await this.prismaService.users.findUnique({
         where: {
           email: decodedToken.email,
         },
+        include: { hops: true },
       });
       // if user doesnt exist create one
       if (!user) {
         const newUserObject = {
           email: decodedToken.email,
           username: decodedToken.name,
-          signInMethod: 'google.com',
+          signInMethod: "google.com",
           password: await this.utility.hashData(dto.token),
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
+          include:{hops:true}
         });
       }
       const tokens = await this.utility.getToken(user.id, user.email);
@@ -239,8 +241,8 @@ export class AuthService {
 
       return { ...tokens, ...user };
     } catch (error) {
-      console.error('Google sign-in error:', error);
-      throw new Error('Google sign-in failed');
+      console.error("Google sign-in error:", error);
+      throw new Error("Google sign-in failed");
     }
   }
 
@@ -265,11 +267,11 @@ export class AuthService {
       },
     });
     if (!user)
-      throw new HttpException('Unauthorized1', HttpStatus.UNAUTHORIZED);
+      throw new HttpException("Unauthorized1", HttpStatus.UNAUTHORIZED);
 
     const Validity = await argon.verify(user.hashRT, rt);
     if (!Validity)
-      throw new HttpException('Unauthorized2', HttpStatus.UNAUTHORIZED);
+      throw new HttpException("Unauthorized2", HttpStatus.UNAUTHORIZED);
 
     const tokens = await this.utility.getToken(user.id, user.email);
     await this.updateRtHash(user.id, tokens.refresh_token);

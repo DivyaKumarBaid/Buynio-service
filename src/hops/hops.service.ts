@@ -31,16 +31,10 @@ export class HopsService {
     try {
       const hop = await this.prismaService.hops.create({
         data: {
-          name: dto.name,
+          ...dto,
           owner: {
             connect: { id },
-          },
-          logo: dto.logo,
-          instagramAccount: dto.instagramAccount,
-          otherReachout: dto.otherReachout,
-          descrtiption: dto.descrtiption,
-          motto: dto.motto,
-          category: dto.category,
+          }
         },
       });
       return hop;
