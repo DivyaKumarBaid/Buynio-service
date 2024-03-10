@@ -30,7 +30,7 @@ export class UserService {
 
   async toggleOnBoarding(id: number) {
     try {
-      return await this.prismaService.users.update({
+      const user = await this.prismaService.users.update({
         where: {
           id,
         },
@@ -38,6 +38,9 @@ export class UserService {
           onBoarded: true,
         },
       });
+      delete user.hashRT;
+      delete user.password;
+      return user;
     } catch (_) {
       throw new HttpException(
         "Internal Server Error",
