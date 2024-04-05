@@ -3,7 +3,22 @@ import { Category } from "src/lib/enums";
 
 export class HopCreationDto {
   @IsNotEmpty()
-  name: string;
+  brandName: string;
+
+  @IsNotEmpty()
+  companyName: string;
+
+  @IsNotEmpty()
+  officialPhone: string;
+
+  @IsNotEmpty()
+  officialEmail: string;
+
+  @IsOptional()
+  customerServicePhone: string;
+
+  @IsOptional()
+  customerServiceEmail: string;
 
   @IsOptional()
   logo: string;
@@ -11,14 +26,24 @@ export class HopCreationDto {
   @IsNotEmpty()
   instagramAccount: string;
 
-  @IsOptional()
+  @IsNotEmpty()
+  facebookAccount: string;
+
+  @IsNotEmpty()
+  otherAccount: string;
+
+  @IsNotEmpty()
   descrtiption: string;
+
+  @IsOptional()
+  privacyPolicy: string;
 
   @IsOptional()
   motto: string;
 
+  @IsNotEmpty()
   category: Category;
 
-  @IsOptional()
-  otherReachout: string;
+  @IsNotEmpty()
+  link: string;
 }

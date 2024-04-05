@@ -4,7 +4,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { HopCreationDto } from "./dto";
 import { Request } from "express";
 
-@Controller("hops")
+@Controller("hop")
 export class HopsController {
   constructor(private hopsService: HopsService) {}
 

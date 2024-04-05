@@ -5,6 +5,7 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { UtilService } from "src/util/util.service";
 import { HopCreationDto } from "./dto";
 import { connect } from "http2";
+import { initiateHop } from "src/lib/InitiateHop";
 
 @Injectable()
 export class HopsService {
@@ -21,20 +22,21 @@ export class HopsService {
         id,
       },
       include: {
-        hops: true,
+        brand: true,
       },
     });
-    return getOwner.hops;
+    return getOwner.brand;
   }
 
   async createHop(id: number, dto: HopCreationDto) {
     try {
-      const hop = await this.prismaService.hops.create({
+      const hop = await this.prismaService.brand.create({
         data: {
           ...dto,
           owner: {
             connect: { id },
           }
+          , blueprint: initiateHop({brandName: dto.brandName})
         },
       });
       return hop;
