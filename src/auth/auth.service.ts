@@ -218,7 +218,7 @@ export class AuthService {
         where: {
           email: decodedToken.email,
         },
-        include: { hops: true },
+        include: { brand: true },
       });
       // if user doesnt exist create one
       if (!user) {
@@ -230,7 +230,7 @@ export class AuthService {
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
-          include:{hops:true}
+          include:{brand:true}
         });
       }
       const tokens = await this.utility.getToken(user.id, user.email);
