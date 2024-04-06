@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { UtilService } from "src/util/util.service";
-import { HopCreationDto } from "./dto";
+import { brandCreationDto } from "./dto";
 import { connect } from "http2";
 import { initiateHop } from "src/lib/InitiateHop";
 
@@ -28,7 +28,7 @@ export class HopsService {
     return getOwner.brand;
   }
 
-  async createHop(id: number, dto: HopCreationDto) {
+  async createHop(id: number, dto: brandCreationDto) {
     try {
       const hop = await this.prismaService.brand.create({
         data: {

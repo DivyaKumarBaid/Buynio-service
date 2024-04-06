@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsOptional } from "class-validator";
 import { Category } from "src/lib/enums";
 
-export class HopCreationDto {
+export class brandCreationDto {
   @IsNotEmpty()
   brandName: string;
 
@@ -23,17 +23,17 @@ export class HopCreationDto {
   @IsOptional()
   logo: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   instagramAccount: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   facebookAccount: string;
 
   @IsNotEmpty()
   otherAccount: string;
 
   @IsNotEmpty()
-  descrtiption: string;
+  descritiption: string;
 
   @IsOptional()
   privacyPolicy: string;
