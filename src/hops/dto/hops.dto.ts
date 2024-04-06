@@ -33,7 +33,7 @@ export class brandCreationDto {
   otherAccount: string;
 
   @IsNotEmpty()
-  descritiption: string;
+  description: string;
 
   @IsOptional()
   privacyPolicy: string;
