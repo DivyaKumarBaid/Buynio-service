@@ -1,8 +1,7 @@
-import { Injectable, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
-import * as argon from 'argon2';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { JwtService } from "@nestjs/jwt";
+import * as argon from "argon2";
 
 @Injectable()
 export class UtilService {
@@ -19,10 +18,11 @@ export class UtilService {
         email,
       },
       {
-        secret: this.config.get('RT_SECRET'),
+        secret: this.config.get("RT_SECRET"),
         expiresIn: 60 * 60 * 24 * 7,
+
         // expiresIn: 10,
-      },
+      }
     );
 
     const accessToken = await this.jwtService.signAsync(
@@ -31,9 +31,9 @@ export class UtilService {
         email,
       },
       {
-        secret: this.config.get('AT_SECRET'),
+        secret: this.config.get("AT_SECRET"),
         expiresIn: 60 * 20,
-      },
+      }
     );
 
     return {
@@ -51,7 +51,7 @@ export class UtilService {
   async getPayload(access_token: string) {
     try {
       const payload = await this.jwtService.verifyAsync(access_token, {
-        secret: this.config.get('AT_SECRET'),
+        secret: this.config.get("AT_SECRET"),
       });
       return payload;
     } catch {

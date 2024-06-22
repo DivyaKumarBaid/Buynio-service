@@ -1,11 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { initiateHop } from "src/lib/InitiateHop";
 import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { UtilService } from "src/util/util.service";
 import { brandCreationDto } from "./dto";
-import { connect } from "http2";
-import { initiateHop } from "src/lib/InitiateHop";
 
 @Injectable()
 export class HopsService {
@@ -35,12 +34,13 @@ export class HopsService {
           ...dto,
           owner: {
             connect: { id },
-          }
-          , blueprint: initiateHop({brandName: dto.brandName})
+          },
+          blueprint: initiateHop(dto),
         },
       });
       return hop;
-    } catch (_) {
+    } catch (e) {
+      console.log(e);
       throw new HttpException(
         "Internal Server Error",
         HttpStatus.INTERNAL_SERVER_ERROR

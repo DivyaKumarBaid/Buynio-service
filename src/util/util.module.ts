@@ -1,12 +1,11 @@
-import { Global, Module } from '@nestjs/common';
-import { UtilService } from './util.service';
-import { JwtModule } from '@nestjs/jwt';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { Global, Module } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { UtilService } from "./util.service";
 
 @Global()
 @Module({
   imports: [JwtModule.register({})],
   providers: [UtilService],
-  exports: [UtilService]
+  exports: [UtilService],
 })
-export class UtilModule { }
+export class UtilModule {}

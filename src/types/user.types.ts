@@ -1,24 +1,24 @@
 export interface Unverified_User_Type {
-    id: number;
-    createdAt: Date;
-    updatedAt: Date;
-    email: string;
-    username: string;
-    password: string;
-    otp?: string;
+  id: number;
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  username: string;
+  password: string;
+  otp?: string;
 }
 
 export interface User_Type {
-    id: number;
-    createdAt: Date;
-    updatedAt: Date;
-    email: string;
-    username: string;
-    password: string;
-    hashRT?: string;
+  id: number;
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  username: string;
+  password: string;
+  hashRT?: string;
 }
 
 export interface Jwt_Payload {
-    sub: string;
-    email: string;
+  sub: string;
+  email: string;
 }

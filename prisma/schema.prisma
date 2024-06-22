@@ -47,7 +47,7 @@ model Brand {
   instagramAccount     String?
   facebookAccount      String?
   otherAccount         String?
-  descrtiption         String   @default("")
+  description          String   @default("")
   privacyPolicy        String?
   termsAndConditions   String?
   motto                String?

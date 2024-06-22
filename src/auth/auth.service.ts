@@ -1,19 +1,19 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as argon from "argon2";
+import { OAuth2Client } from "google-auth-library";
+import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
+import { Unverified_User_Type } from "src/types/user.types";
+import { UtilService } from "src/util/util.service";
 import {
   OTPAuthDto,
   OtpPasswordDto,
   PasswordAuthDto,
   SigninAuthDto,
-  SignupAuthDto,
   SigninGoogleAuthDto,
+  SignupAuthDto,
 } from "./dto";
-import { UtilService } from "src/util/util.service";
-import * as argon from "argon2";
-import { MailService } from "src/mail/mail.service";
-import { Unverified_User_Type } from "src/types/user.types";
-import { ConfigService } from "@nestjs/config";
-import { OAuth2Client } from "google-auth-library";
 
 @Injectable()
 export class AuthService {
@@ -56,7 +56,8 @@ export class AuthService {
   }
 
   async signupLocal(dto: SignupAuthDto) {
-    var user: Unverified_User_Type, otp: string;
+    let user: Unverified_User_Type, otp: string;
+
     // if user already exist in as verified user
     const preExist = await this.prismaService.users.findUnique({
       where: {
@@ -127,7 +128,9 @@ export class AuthService {
           user_mail: dto.email,
         },
       });
-    } catch (err) {}
+    } catch (err) {
+      return;
+    }
 
     const user = await this.prismaService.users.findUnique({
       where: {
@@ -138,6 +141,7 @@ export class AuthService {
 
     const otp = String(await this.utility.generateOtp());
     const hashOtp = await this.utility.hashData(otp);
+
     // create a reln table to store user vs otp
     await this.mailer.sendUserConfirmation(user.email, user.username, otp);
 
@@ -214,12 +218,13 @@ export class AuthService {
         audience: this.config.get("GOOGLE_CLIENT_ID"),
       });
       const decodedToken = ticket.getPayload();
-      var user = await this.prismaService.users.findUnique({
+      let user = await this.prismaService.users.findUnique({
         where: {
           email: decodedToken.email,
         },
         include: { brand: true },
       });
+
       // if user doesnt exist create one
       if (!user) {
         const newUserObject = {
@@ -230,11 +235,12 @@ export class AuthService {
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
-          include:{brand:true}
+          include: { brand: true },
         });
       }
       const tokens = await this.utility.getToken(user.id, user.email);
       await this.updateRtHash(user.id, tokens.refresh_token);
+
       // delete stuff to return user
       delete user.hashRT;
       delete user.password;
