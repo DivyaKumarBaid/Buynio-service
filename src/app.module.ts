@@ -8,6 +8,7 @@ import { HopsModule } from "./hops/hops.module";
 import { UserService } from "./user/user.service";
 import { UserController } from "./user/user.controller";
 import { UserModule } from "./user/user.module";
+import { SimulatorGateway } from "./gateway/simulator.gateway";
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { UserModule } from "./user/user.module";
     UserModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, SimulatorGateway],
 })
 export class AppModule {}
