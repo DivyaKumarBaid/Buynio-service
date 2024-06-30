@@ -25,6 +25,7 @@ export class SimulatorGateway {
   @SubscribeMessage("messageToRoom")
   handleMessage(
     @MessageBody() payload: { room: string; message: string }
+
     // @ConnectedSocket() client: Socket
   ): void {
     this.server.to(payload.room).emit("messageToClient", payload.message);
@@ -33,6 +34,7 @@ export class SimulatorGateway {
   @SubscribeMessage("elemSelectedToRoom")
   handleElemSelected(
     @MessageBody() payload: { room: string; message: string }
+
     // @ConnectedSocket() client: Socket
   ): void {
     this.server.to(payload.room).emit("elemSelectedToClient", payload.message);
@@ -41,6 +43,7 @@ export class SimulatorGateway {
   @SubscribeMessage("updateJsonToRoom")
   handleUpdateJson(
     @MessageBody() payload: { room: string; message: any }
+
     // @ConnectedSocket() client: Socket
   ): void {
     this.server.to(payload.room).emit("updateJsonToClient", payload.message);

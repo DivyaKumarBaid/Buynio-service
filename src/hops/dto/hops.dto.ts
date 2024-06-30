@@ -47,3 +47,11 @@ export class brandCreationDto {
   @IsNotEmpty()
   link: string;
 }
+
+export class savedHopCreationDto {
+  @IsNotEmpty()
+  blueprint: string;
+
+  @IsNotEmpty()
+  name: string;
+}

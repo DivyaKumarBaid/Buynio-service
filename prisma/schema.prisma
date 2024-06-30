@@ -18,24 +18,26 @@ model Unverified_Users {
 }
 
 model Users {
-  id           Int      @id @default(autoincrement())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  email        String   @unique
+  id           Int          @id @default(autoincrement())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  email        String       @unique
   username     String
   password     String
   hashRT       String?
-  role         Role     @default(USER)
-  signInMethod String   @default("local.com")
-  onBoarded    Boolean  @default(false)
+  role         Role         @default(USER)
+  signInMethod String       @default("local.com")
+  onBoarded    Boolean      @default(false)
   brand        Brand[]
+  SavedWeb     SavedWeb[]
+  ReleasedWeb  ReleasedWeb?
 }
 
 model Brand {
-  id                   Int      @id @default(autoincrement())
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  owner                Users    @relation(fields: [ownerId], references: [id])
+  id                   Int          @id @default(autoincrement())
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  owner                Users        @relation(fields: [ownerId], references: [id])
   ownerId              Int
   brandName            String
   companyName          String
@@ -47,16 +49,37 @@ model Brand {
   instagramAccount     String?
   facebookAccount      String?
   otherAccount         String?
-  description          String   @default("")
+  description          String       @default("")
   privacyPolicy        String?
   termsAndConditions   String?
   motto                String?
   category             Category
-  verified             Boolean  @default(false)
-  link                 String   @unique()
-  blueprint            Json
+  verified             Boolean      @default(false)
+  link                 String       @unique()
+  ReleasedWeb          ReleasedWeb?
 
   @@map("Brand")
+}
+
+model SavedWeb {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner     Users    @relation(fields: [ownerId], references: [id])
+  ownerId   Int
+  blueprint Json
+  name      String
+}
+
+model ReleasedWeb {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner     Users    @relation(fields: [ownerId], references: [id])
+  ownerId   Int      @unique
+  brand     Brand    @relation(fields: [brandId], references: [id])
+  brandId   Int      @unique
+  blueprint Json
 }
 
 model PasswordOtp {
