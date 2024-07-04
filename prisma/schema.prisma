@@ -53,7 +53,7 @@ model Brand {
   privacyPolicy        String?
   termsAndConditions   String?
   motto                String?
-  category             Category
+  category             String
   verified             Boolean      @default(false)
   link                 String       @unique()
   ReleasedWeb          ReleasedWeb?
@@ -91,9 +91,4 @@ model PasswordOtp {
 enum Role {
   USER
   ADMIN
-}
-
-enum Category {
-  CLOTH
-  ELECTRONICS
 }

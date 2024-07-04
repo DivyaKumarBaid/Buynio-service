@@ -1,5 +1,4 @@
 import { IsNotEmpty, IsOptional } from "class-validator";
-import { Category } from "src/lib/enums";
 
 export class brandCreationDto {
   @IsNotEmpty()
@@ -42,16 +41,16 @@ export class brandCreationDto {
   motto: string;
 
   @IsNotEmpty()
-  category: Category;
+  category: string;
 
   @IsNotEmpty()
   link: string;
 }
 
 export class savedHopCreationDto {
-  @IsNotEmpty()
+  @IsOptional()
   blueprint: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   name: string;
 }

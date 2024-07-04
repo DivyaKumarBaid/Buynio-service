@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -32,7 +33,7 @@ export class HopsController {
 
   // get all saved hop
   @UseGuards(AuthGuard("jwt"))
-  @Get("saved/all")
+  @Get("saved-hop/all")
   async getAllSavedHops(@Req() req: Request) {
     const user = req.user;
     return await this.hopsService.getAllSavedHops(user["sub"]);
@@ -40,17 +41,17 @@ export class HopsController {
 
   // get single saved hop
   @UseGuards(AuthGuard("jwt"))
-  @Get("savedHop/:id")
-  async getSavedHop(@Req() req: Request, @Param("id") id: number) {
+  @Get("saved-hop/:id")
+  async getSavedHop(@Req() req: Request, @Param("id") id: string) {
     const user = req.user;
     return await this.hopsService.getSavedHop(user["sub"], id);
   }
 
   @UseGuards(AuthGuard("jwt"))
-  @Get("savedHop/save/:id")
+  @Put("saved-hop/save/:id")
   async saveHop(
     @Req() req: Request,
-    @Param("id") id: number,
+    @Param("id") id: string,
     @Body() dto: savedHopCreationDto
   ) {
     const user = req.user;
@@ -58,7 +59,7 @@ export class HopsController {
   }
 
   @UseGuards(AuthGuard("jwt"))
-  @Post("savedHop/create")
+  @Post("saved-hop/create")
   async createSavedHop(@Req() req: Request, @Body() dto: savedHopCreationDto) {
     const user = req.user;
     return await this.hopsService.createSavedHop(user["sub"], dto);

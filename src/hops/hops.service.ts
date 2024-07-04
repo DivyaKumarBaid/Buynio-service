@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { initiateHop } from "src/lib/InitiateHop";
 import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { UtilService } from "src/util/util.service";
 import { brandCreationDto, savedHopCreationDto } from "./dto";
+import { initiateHop } from "src/lib/InitiateHop";
 
 @Injectable()
 export class HopsService {
@@ -30,24 +30,20 @@ export class HopsService {
   }
 
   async createHop(id: number, dto: brandCreationDto) {
-    try {
-      const hop = await this.prismaService.brand.create({
-        data: {
-          ...dto,
-          owner: {
-            connect: { id },
-          },
-          // blueprint: initiateHop(dto),
+    // try {
+    const hop = await this.prismaService.brand.create({
+      data: {
+        ...dto,
+        owner: {
+          connect: { id },
         },
-      });
-      return hop;
-    } catch (e) {
-      console.log(e);
-      throw new HttpException(
-        "Internal Server Error",
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+      },
+    });
+    const savedHop = await this.createSavedHop(id, {
+      blueprint: initiateHop(dto),
+      name: "Untitled",
+    });
+    return { ...hop, savedHop };
   }
 
   // saved hops
@@ -61,11 +57,11 @@ export class HopsService {
     return getSavedHops;
   }
 
-  async getSavedHop(id: number, savedHopId: number) {
+  async getSavedHop(id: number, savedHopId: string) {
     try {
       const getSavedHop = await this.prismaService.savedWeb.findUniqueOrThrow({
         where: {
-          id: savedHopId,
+          id: Number(savedHopId),
           ownerId: id,
         },
       });
@@ -78,9 +74,14 @@ export class HopsService {
 
   async createSavedHop(id: number, dto: savedHopCreationDto) {
     try {
+      const brand = await this.prismaService.brand.findUnique({
+        where: { id },
+      });
+      delete brand.id;
       const hop = await this.prismaService.savedWeb.create({
         data: {
-          ...dto,
+          blueprint: dto?.blueprint || initiateHop(brand),
+          name: dto?.name || "Untitled",
           owner: {
             connect: { id },
           },
@@ -96,12 +97,12 @@ export class HopsService {
     }
   }
 
-  async saveHop(id: number, savedHopId: number, dto: savedHopCreationDto) {
+  async saveHop(id: number, savedHopId: string, dto: savedHopCreationDto) {
     try {
       const hop = await this.prismaService.savedWeb.update({
         where: {
-          id: savedHopId,
-          ownerId: id
+          id: Number(savedHopId),
+          ownerId: id,
         },
         data: {
           ...dto,
