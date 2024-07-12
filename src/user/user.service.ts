@@ -19,9 +19,9 @@ export class UserService {
         where: {
           id,
         },
-        include:{
-          brand: true
-        }
+        include: {
+          brand: true,
+        },
       });
     } catch (_) {
       throw new HttpException(

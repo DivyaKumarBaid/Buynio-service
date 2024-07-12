@@ -67,7 +67,7 @@ model SavedWeb {
   updatedAt DateTime @updatedAt
   owner     Users    @relation(fields: [ownerId], references: [id])
   ownerId   Int
-  blueprint Json
+  blueprint String
   name      String
 }
 
@@ -79,7 +79,7 @@ model ReleasedWeb {
   ownerId   Int      @unique
   brand     Brand    @relation(fields: [brandId], references: [id])
   brandId   Int      @unique
-  blueprint Json
+  blueprint String
 }
 
 model PasswordOtp {

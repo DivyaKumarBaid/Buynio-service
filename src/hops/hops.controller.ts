@@ -48,7 +48,7 @@ export class HopsController {
   }
 
   @UseGuards(AuthGuard("jwt"))
-  @Put("saved-hop/save/:id")
+  @Post("saved-hop/save/:id")
   async saveHop(
     @Req() req: Request,
     @Param("id") id: string,

@@ -34,7 +34,7 @@ export const blueprint = (props: brandCreationDto) => {
       brandName: props.brandName,
       logo: props.logo,
       currency: "INR",
-      backgroud: "#101010",
+      background: "#101010",
       ...props,
     },
     NAVBAR: {
