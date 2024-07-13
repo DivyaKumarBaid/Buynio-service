@@ -65,7 +65,7 @@ export const blueprint = (props: brandCreationDto) => {
       fontPrimaryColor: "#fff",
       fontSecondaryColor: "#eee",
     },
-    sections: [
+    SECTIONS: [
       {
         type: "CAROUSEL",
         backgroud: "#121212",

@@ -48,4 +48,13 @@ export class SimulatorGateway {
   ): void {
     this.server.to(payload.room).emit("updateJsonToClient", payload.message);
   }
+
+  @SubscribeMessage("addSectionToRoom")
+  handleAddSection(
+    @MessageBody() payload: { room: string; message: any }
+
+    // @ConnectedSocket() client: Socket
+  ): void {
+    this.server.to(payload.room).emit("addSectionToClient", payload.message);
+  }
 }

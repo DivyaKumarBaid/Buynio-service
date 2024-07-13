@@ -4,14 +4,13 @@ import {
   Get,
   Param,
   Post,
-  Put,
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { HopsService } from "./hops.service";
 import { AuthGuard } from "@nestjs/passport";
-import { brandCreationDto, savedHopCreationDto } from "./dto";
 import { Request } from "express";
+import { brandCreationDto, savedHopCreationDto } from "./dto";
+import { HopsService } from "./hops.service";
 
 @Controller("hop")
 export class HopsController {
