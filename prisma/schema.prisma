@@ -31,6 +31,7 @@ model Users {
   brand        Brand[]
   SavedWeb     SavedWeb[]
   ReleasedWeb  ReleasedWeb?
+  Products     Products[]
 }
 
 model Brand {
@@ -38,7 +39,7 @@ model Brand {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
   owner                Users        @relation(fields: [ownerId], references: [id])
-  ownerId              Int
+  ownerId              Int          @unique()
   brandName            String
   companyName          String
   officialPhone        String
@@ -57,18 +58,20 @@ model Brand {
   verified             Boolean      @default(false)
   link                 String       @unique()
   ReleasedWeb          ReleasedWeb?
+  Products             Products[]
 
   @@map("Brand")
 }
 
 model SavedWeb {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  owner     Users    @relation(fields: [ownerId], references: [id])
-  ownerId   Int
-  blueprint String
-  name      String
+  id          Int        @id @default(autoincrement())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  owner       Users      @relation(fields: [ownerId], references: [id])
+  ownerId     Int
+  blueprint   String
+  name        String
+  Products    Products[]
 }
 
 model ReleasedWeb {
@@ -79,7 +82,26 @@ model ReleasedWeb {
   ownerId   Int      @unique
   brand     Brand    @relation(fields: [brandId], references: [id])
   brandId   Int      @unique
+  name        String
   blueprint String
+}
+
+model Products {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       Users    @relation(fields: [ownerId], references: [id])
+  ownerId     Int
+  brand       Brand    @relation(fields: [brandId], references: [id])
+  brandId     Int
+  hop         SavedWeb @relation(fields: [hopId], references: [id])
+  hopId       Int
+  title       String
+  description String
+  price       String
+  redirection String
+  src         String
+  background  String
 }
 
 model PasswordOtp {

@@ -49,8 +49,23 @@ export class brandCreationDto {
 
 export class savedHopCreationDto {
   @IsOptional()
+  products: Product[];
+
+  @IsOptional()
+  publish: Boolean
+
+  @IsOptional()
   blueprint: string;
 
   @IsOptional()
   name: string;
 }
+
+export type Product = {
+  title: string;
+  description: string;
+  price: string;
+  redirection: string;
+  src: string;
+  background: string;
+};

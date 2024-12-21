@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -18,9 +19,21 @@ export class HopsController {
 
   @UseGuards(AuthGuard("jwt"))
   @Get("all")
-  async getAllHops(@Req() req: Request) {
+  async getAllHops(@Req() req: Request, @Query("page") page?: string) {
     const user = req.user;
-    return await this.hopsService.getAllHops(user["sub"]);
+    return await this.hopsService.getAllHops(user["sub"], page || "0");
+  }
+
+  @UseGuards(AuthGuard("jwt"))
+  @Get("all/published")
+  async getAllPublishedHops(@Req() req: Request, @Query("page") page?: string) {
+    const user = req.user;
+    return await this.hopsService.getAllPublishedHops(user["sub"], page || "0");
+  }
+
+  @Get("published/:link")
+  async getPublishedHop(@Param("link") link: string) {
+    return await this.hopsService.getPublishedHop(link);
   }
 
   @UseGuards(AuthGuard("jwt"))
@@ -33,9 +46,9 @@ export class HopsController {
   // get all saved hop
   @UseGuards(AuthGuard("jwt"))
   @Get("saved-hop/all")
-  async getAllSavedHops(@Req() req: Request) {
+  async getAllSavedHops(@Req() req: Request, @Query("page") page?: string) {
     const user = req.user;
-    return await this.hopsService.getAllSavedHops(user["sub"]);
+    return await this.hopsService.getAllSavedHops(user["sub"], page || "0");
   }
 
   // get single saved hop
