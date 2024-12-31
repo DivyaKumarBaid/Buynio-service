@@ -18,20 +18,23 @@ model Unverified_Users {
 }
 
 model Users {
-  id           Int          @id @default(autoincrement())
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  email        String       @unique
-  username     String
-  password     String
-  hashRT       String?
-  role         Role         @default(USER)
-  signInMethod String       @default("local.com")
-  onBoarded    Boolean      @default(false)
-  brand        Brand[]
-  SavedWeb     SavedWeb[]
-  ReleasedWeb  ReleasedWeb?
-  Products     Products[]
+  id                   Int          @id @default(autoincrement())
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  email                String       @unique
+  username             String
+  password             String
+  hashRT               String?
+  role                 Role         @default(USER)
+  signInMethod         String       @default("local.com")
+  onBoarded            Boolean      @default(false)
+  brand                Brand[]
+  SavedWeb             SavedWeb[]
+  ReleasedWeb          ReleasedWeb?
+  Products             Products[]
+  instagramAccessToken String?
+  isInstagramLinked    Boolean      @default(false)
+  instagramId          String?
 }
 
 model Brand {
@@ -64,14 +67,14 @@ model Brand {
 }
 
 model SavedWeb {
-  id          Int        @id @default(autoincrement())
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  owner       Users      @relation(fields: [ownerId], references: [id])
-  ownerId     Int
-  blueprint   String
-  name        String
-  Products    Products[]
+  id        Int        @id @default(autoincrement())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  owner     Users      @relation(fields: [ownerId], references: [id])
+  ownerId   Int
+  blueprint String
+  name      String
+  Products  Products[]
 }
 
 model ReleasedWeb {
@@ -82,7 +85,7 @@ model ReleasedWeb {
   ownerId   Int      @unique
   brand     Brand    @relation(fields: [brandId], references: [id])
   brandId   Int      @unique
-  name        String
+  name      String
   blueprint String
 }
 

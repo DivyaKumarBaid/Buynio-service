@@ -22,3 +22,10 @@ export interface Jwt_Payload {
   sub: string;
   email: string;
 }
+
+export interface Instagram_Jwt_Payload {
+  access_token: string;
+  username: string;
+  user_id: string;
+  name: string;
+}

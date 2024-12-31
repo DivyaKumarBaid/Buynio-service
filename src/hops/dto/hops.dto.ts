@@ -52,7 +52,7 @@ export class savedHopCreationDto {
   products: Product[];
 
   @IsOptional()
-  publish: Boolean
+  publish: boolean;
 
   @IsOptional()
   blueprint: string;

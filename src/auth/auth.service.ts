@@ -4,16 +4,20 @@ import * as argon from "argon2";
 import { OAuth2Client } from "google-auth-library";
 import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
-import { Unverified_User_Type } from "src/types/user.types";
+import {
+  Instagram_Jwt_Payload,
+  Unverified_User_Type,
+} from "src/types/user.types";
 import { UtilService } from "src/util/util.service";
 import {
   OTPAuthDto,
   OtpPasswordDto,
   PasswordAuthDto,
   SigninAuthDto,
-  SigninGoogleAuthDto,
+  SigninThirdPartyAuthDto,
   SignupAuthDto,
 } from "./dto";
+import * as jwt from "jsonwebtoken";
 
 @Injectable()
 export class AuthService {
@@ -211,7 +215,57 @@ export class AuthService {
     return { ...tokens, ...user };
   }
 
-  async googleLogin(dto: SigninGoogleAuthDto) {
+  async instagramLogin(dto: SigninThirdPartyAuthDto) {
+    try {
+      const ticket = jwt.verify(
+        dto.token,
+        this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
+      );
+
+      const decodedToken = ticket as Instagram_Jwt_Payload;
+      let user = await this.prismaService.users.findUnique({
+        where: {
+          email: decodedToken.user_id,
+        },
+        include: { brand: true },
+      });
+
+      // if user doesnt exist create one
+      if (!user) {
+        const token = jwt.sign(
+          decodedToken.access_token,
+          this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET"),
+          { expiresIn: "30d" } // Token expiry set to 30 days since instagram access_token expiry is 30 days
+        );
+        const newUserObject = {
+          email: decodedToken.username, // for instagram login email isnt there
+          username: decodedToken.name,
+          signInMethod: "instagram.com",
+          password: await this.utility.hashData(dto.token),
+          isInstagramLinked: true,
+          instagramAccessToken: token,
+          instagramId: decodedToken.user_id
+        };
+        user = await this.prismaService.users.create({
+          data: newUserObject,
+          include: { brand: true },
+        });
+      }
+      const tokens = await this.utility.getToken(user.id, user.email);
+      await this.updateRtHash(user.id, tokens.refresh_token);
+
+      // delete stuff to return user
+      delete user.hashRT;
+      delete user.password;
+
+      return { ...tokens, ...user };
+    } catch (error) {
+      console.error("Instagram sign-in error:", error);
+      throw new Error("Instagram sign-in failed");
+    }
+  }
+
+  async googleLogin(dto: SigninThirdPartyAuthDto) {
     try {
       const ticket = await this.admin.verifyIdToken({
         idToken: dto.token,

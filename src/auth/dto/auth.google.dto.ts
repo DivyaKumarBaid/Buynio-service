@@ -1,6 +1,6 @@
 import { IsNotEmpty } from "class-validator";
 
-export class SigninGoogleAuthDto {
+export class SigninThirdPartyAuthDto {
   @IsNotEmpty()
   token: string;
 }

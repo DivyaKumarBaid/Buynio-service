@@ -15,7 +15,7 @@ import {
   PasswordAuthDto,
   SigninAuthDto,
   SignupAuthDto,
-  SigninGoogleAuthDto,
+  SigninThirdPartyAuthDto,
 } from "./dto";
 import { Response, Request } from "express";
 import { AuthGuard } from "@nestjs/passport";
@@ -72,8 +72,14 @@ export class AuthController {
 
   // using gmail
   @Post("/google/login")
-  async googleLogin(@Body() dto: SigninGoogleAuthDto) {
+  async googleLogin(@Body() dto: SigninThirdPartyAuthDto) {
     return await this.authService.googleLogin(dto);
+  }
+
+  // using instagram
+  @Post("/instagram/login")
+  async instagramLogin(@Body() dto: SigninThirdPartyAuthDto) {
+    return await this.authService.instagramLogin(dto);
   }
 
   @UseGuards(AuthGuard("jwt-refresh"))

@@ -36,6 +36,7 @@ export class HopsService {
       },
     };
   }
+
   // all published hop
   async getAllPublishedHops(id: number, pg: string) {
     const page = Number(pg);
@@ -53,6 +54,7 @@ export class HopsService {
       },
     };
   }
+
   // single published hop
   async getPublishedHop(link: string) {
     const brand = await this.prismaService.brand.findUnique({
@@ -248,7 +250,7 @@ export class HopsService {
             },
           });
         }
-        const releasedHop = await this.prismaService.releasedWeb.create({
+        await this.prismaService.releasedWeb.create({
           data: {
             blueprint: dto?.blueprint || initiateHop(brand),
             name: dto?.name || "Untitled",
