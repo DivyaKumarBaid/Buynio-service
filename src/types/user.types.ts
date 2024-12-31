@@ -24,8 +24,10 @@ export interface Jwt_Payload {
 }
 
 export interface Instagram_Jwt_Payload {
-  access_token: string;
-  username: string;
-  user_id: string;
-  name: string;
+  data: {
+    access_token: string;
+    username: string;
+    user_id: string;
+    name: string;
+  };
 }

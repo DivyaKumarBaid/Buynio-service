@@ -226,7 +226,7 @@ export class AuthService {
       console.log(decodedToken);
       let user = await this.prismaService.users.findUnique({
         where: {
-          email: decodedToken.username,
+          email: decodedToken.data.username,
         },
         include: { brand: true },
       });
@@ -234,18 +234,18 @@ export class AuthService {
       // if user doesnt exist create one
       if (!user) {
         const token = jwt.sign(
-          decodedToken.access_token,
+          decodedToken.data.access_token,
           this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET"),
           { expiresIn: "30d" } // Token expiry set to 30 days since instagram access_token expiry is 30 days
         );
         const newUserObject = {
-          email: decodedToken.username, // for instagram login email isnt there
-          username: decodedToken.name,
+          email: decodedToken.data.username, // for instagram login email isnt there
+          username: decodedToken.data.name,
           signInMethod: "instagram.com",
           password: await this.utility.hashData(dto.token),
           isInstagramLinked: true,
           instagramAccessToken: token,
-          instagramId: decodedToken.user_id,
+          instagramId: decodedToken.data.user_id,
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
