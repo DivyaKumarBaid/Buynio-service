@@ -223,9 +223,10 @@ export class AuthService {
       );
 
       const decodedToken = ticket as Instagram_Jwt_Payload;
+      console.log(decodedToken);
       let user = await this.prismaService.users.findUnique({
         where: {
-          email: decodedToken.user_id,
+          email: decodedToken.username,
         },
         include: { brand: true },
       });
@@ -244,7 +245,7 @@ export class AuthService {
           password: await this.utility.hashData(dto.token),
           isInstagramLinked: true,
           instagramAccessToken: token,
-          instagramId: decodedToken.user_id
+          instagramId: decodedToken.user_id,
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
