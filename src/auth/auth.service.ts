@@ -235,8 +235,7 @@ export class AuthService {
       if (!user) {
         const token = jwt.sign(
           decodedToken.data.access_token,
-          this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET"),
-          { expiresIn: "30d" } // Token expiry set to 30 days since instagram access_token expiry is 30 days
+          this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
         );
         const newUserObject = {
           email: decodedToken.data.username, // for instagram login email isnt there
