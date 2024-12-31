@@ -34,7 +34,7 @@ model Users {
   Products             Products[]
   instagramAccessToken String?
   isInstagramLinked    Boolean      @default(false)
-  instagramId          String?
+  instagramId          Int?
 }
 
 model Brand {
