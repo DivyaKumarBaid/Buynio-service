@@ -244,7 +244,7 @@ export class AuthService {
           password: await this.utility.hashData(dto.token),
           isInstagramLinked: true,
           instagramAccessToken: token,
-          instagramId: decodedToken.data.user_id,
+          instagramId: decodedToken.data.user_id.toString(),
         };
         user = await this.prismaService.users.create({
           data: newUserObject,
