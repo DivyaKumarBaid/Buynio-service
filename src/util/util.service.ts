@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as argon from "argon2";
+import { APIResponse } from "src/types/api.types";
 
 @Injectable()
 export class UtilService {
@@ -45,7 +46,7 @@ export class UtilService {
   async generateOtp() {
     const minm = 1000;
     const maxm = 9999;
-    return Math.floor(Math.random() * (maxm - minm + 1)) + minm;
+    return (Math.floor(Math.random() * (maxm - minm + 1)) + minm).toString();
   }
 
   async getPayload(access_token: string) {
@@ -57,5 +58,16 @@ export class UtilService {
     } catch {
       throw new UnauthorizedException();
     }
+  }
+
+  createSuccessResponse(response: Record<any, any>): APIResponse {
+    return { error: false, response };
+  }
+
+  createErrorResponse(
+    developerMessage: string,
+    displayMessage: string
+  ): APIResponse {
+    return { error: true, developerMessage, displayMessage };
   }
 }

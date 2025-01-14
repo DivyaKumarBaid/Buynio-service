@@ -1,11 +1,12 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { MailService } from "src/mail/mail.service";
-import { PrismaService } from "src/prisma/prisma.service";
-import { UtilService } from "src/util/util.service";
-import { brandCreationDto, savedHopCreationDto } from "./dto";
 import { initiateHop } from "src/lib/InitiateHop";
 import { pageIndex } from "src/lib/constants";
+import { MailService } from "src/mail/mail.service";
+import { PrismaService } from "src/prisma/prisma.service";
+import { APIResponse } from "src/types/api.types";
+import { UtilService } from "src/util/util.service";
+import { brandCreationDto, savedHopCreationDto } from "./dto";
 
 @Injectable()
 export class HopsService {
@@ -16,256 +17,268 @@ export class HopsService {
     private config: ConfigService
   ) {}
 
-  // hop
-  async getAllHops(id: number, pg: string) {
-    const page = Number(pg);
-    const count = await this.prismaService.savedWeb.count();
-    const hops = await this.prismaService.savedWeb.findMany({
-      where: {
-        ownerId: id,
-      },
-      take: 15,
-      skip: page * pageIndex,
-    });
-    return {
-      hops,
-      meta: {
-        count,
-        currentPage: pg,
-        totalPages: count / pageIndex + (count % pageIndex ? 1 : 0),
-      },
-    };
-  }
-
-  // all published hop
-  async getAllPublishedHops(id: number, pg: string) {
-    const page = Number(pg);
-    const count = await this.prismaService.savedWeb.count();
-    const releasedWebs = await this.prismaService.releasedWeb.findMany({
-      take: 15,
-      skip: page * pageIndex,
-    });
-    return {
-      hops: releasedWebs,
-      meta: {
-        count,
-        currentPage: pg,
-        totalPages: count / pageIndex + (count % pageIndex ? 1 : 0),
-      },
-    };
-  }
-
-  // single published hop
-  async getPublishedHop(link: string) {
-    const brand = await this.prismaService.brand.findUnique({
-      where: {
-        link,
-      },
-    });
-    if (brand) {
-      const releasedWeb = await this.prismaService.releasedWeb.findUnique({
-        where: {
-          brandId: brand.id,
-        },
-      });
-      return releasedWeb;
-    }
-  }
-
-  async createHop(id: number, dto: brandCreationDto) {
-    // try {
-    const hop = await this.prismaService.brand.create({
-      data: {
-        ...dto,
-        owner: {
-          connect: { id },
-        },
-      },
-    });
-    const savedHop = await this.createSavedHop(id, {
-      blueprint: initiateHop(dto),
-      name: "Untitled",
-      products: [],
-      publish: false,
-    });
-    return { ...hop, savedHop };
-  }
-
-  // saved hops
-
-  async getAllSavedHops(id: number, pg: string) {
-    const page = Number(pg);
-    const count = await this.prismaService.savedWeb.count();
-    const hops = await this.prismaService.savedWeb.findMany({
-      where: {
-        ownerId: id,
-      },
-      take: 15,
-      skip: page * pageIndex,
-    });
-    return {
-      hops,
-      meta: {
-        count,
-        currentPage: pg,
-        totalPages: count / pageIndex + (count % pageIndex ? 1 : 0),
-      },
-    };
-  }
-
-  async getSavedHop(id: number, savedHopId: string) {
+  async getAllHops(ownerId: number, pg: string): Promise<APIResponse> {
     try {
-      const getSavedHop = await this.prismaService.savedWeb.findUniqueOrThrow({
-        where: {
-          id: Number(savedHopId),
-          ownerId: id,
+      const page = Number(pg);
+      const count = await this.prismaService.savedWeb.count({
+        where: { ownerId },
+      });
+      const hops = await this.prismaService.savedWeb.findMany({
+        where: { ownerId },
+        take: 15,
+        skip: page * pageIndex,
+      });
+      return this.utility.createSuccessResponse({
+        hops,
+        meta: {
+          count,
+          currentPage: page,
+          totalPages: Math.ceil(count / pageIndex),
         },
       });
-      return getSavedHop;
-    } catch (e) {
-      console.log(e);
-      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to fetch hops",
+        "Unable to fetch hops. Please try again later."
+      );
     }
   }
 
-  async createSavedHop(id: number, dto: savedHopCreationDto) {
+  async getAllPublishedHops(id: number, pg: string): Promise<APIResponse> {
+    try {
+      const page = Number(pg);
+      const count = await this.prismaService.releasedWeb.count();
+      const releasedWebs = await this.prismaService.releasedWeb.findMany({
+        take: 15,
+        skip: page * pageIndex,
+      });
+      return this.utility.createSuccessResponse({
+        hops: releasedWebs,
+        meta: {
+          count,
+          currentPage: page,
+          totalPages: Math.ceil(count / pageIndex),
+        },
+      });
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to fetch published hops",
+        "Unable to fetch published hops. Please try again later."
+      );
+    }
+  }
+
+  async getPublishedHop(link: string): Promise<APIResponse> {
     try {
       const brand = await this.prismaService.brand.findUnique({
-        where: { id },
+        where: { link },
+      });
+      if (!brand) {
+        return this.utility.createErrorResponse(
+          "Brand not found",
+          "The requested brand does not exist."
+        );
+      }
+      const releasedWeb = await this.prismaService.releasedWeb.findUnique({
+        where: { brandId: brand.id },
+      });
+      return this.utility.createSuccessResponse(releasedWeb || {});
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to fetch published hop",
+        "Unable to fetch the published hop. Please try again later."
+      );
+    }
+  }
+
+  async createHop(
+    ownerId: number,
+    dto: brandCreationDto
+  ): Promise<APIResponse> {
+    try {
+      const hop = await this.prismaService.brand.create({
+        data: {
+          ...dto,
+          owner: { connect: { id: ownerId } },
+        },
+      });
+      const savedHop = await this.createSavedHop(ownerId, {
+        blueprint: initiateHop(dto),
+        name: "Untitled",
+        products: [],
+        publish: false,
+      });
+      if (savedHop.error == false) {
+        return this.utility.createSuccessResponse({
+          ...hop,
+          savedHop: savedHop.response,
+        });
+      }
+      return this.utility.createErrorResponse(
+        "Failed to create hop",
+        "Unable to create hop. Please try again later."
+      );
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to create hop",
+        "Unable to create hop. Please try again later."
+      );
+    }
+  }
+
+  async getAllSavedHops(ownerId: number, pg: string): Promise<APIResponse> {
+    return this.getAllHops(ownerId, pg);
+  }
+
+  async getSavedHop(ownerId: number, savedHopId: string): Promise<APIResponse> {
+    try {
+      const savedHop = await this.prismaService.savedWeb.findUniqueOrThrow({
+        where: { id: Number(savedHopId), ownerId },
+      });
+      return this.utility.createSuccessResponse(savedHop);
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to fetch saved hop",
+        "Unable to fetch the saved hop. Please try again later."
+      );
+    }
+  }
+
+  async createSavedHop(
+    id: number,
+    dto: savedHopCreationDto
+  ): Promise<APIResponse> {
+    try {
+      const brand = await this.prismaService.brand.findUnique({
+        where: { ownerId: id },
       });
       const brandId = brand.id;
       delete brand.id;
       const hop = await this.prismaService.savedWeb.create({
         data: {
-          blueprint: dto?.blueprint || initiateHop(brand),
-          name: dto?.name || "Untitled",
-          owner: {
-            connect: { id },
-          },
+          blueprint: dto.blueprint || initiateHop(brand),
+          name: dto.name || "Untitled",
+          owner: { connect: { id } },
         },
       });
 
       await this.updatePublishedHops(dto, id, brandId, brand);
 
-      const products = dto?.products.map((product) => {
-        return this.prismaService.products.create({
-          data: {
-            ...product,
-            owner: {
-              connect: { id },
+      if (dto.products?.length) {
+        const productPromises = dto.products.map((product) =>
+          this.prismaService.products.create({
+            data: {
+              ...product,
+              owner: {
+                connect: { id },
+              },
+              brand: {
+                connect: { id: brandId },
+              },
+              hop: {
+                connect: { id: hop.id },
+              },
             },
-            brand: {
-              connect: { id: brandId },
-            },
-            hop: {
-              connect: { id: hop.id },
-            },
-          },
-        });
-      });
-      await Promise.all(products);
-      return hop;
-    } catch (e) {
-      console.log(e);
-      throw new HttpException(
-        "Internal Server Error",
-        HttpStatus.INTERNAL_SERVER_ERROR
+          })
+        );
+        await Promise.all(productPromises);
+      }
+      return this.utility.createSuccessResponse(hop);
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to create saved hop",
+        "Unable to create the saved hop. Please try again later."
       );
     }
   }
 
-  async saveHop(id: number, savedHopId: string, dto: savedHopCreationDto) {
+  async saveHop(
+    ownerId: number,
+    savedHopId: string,
+    dto: savedHopCreationDto
+  ): Promise<APIResponse> {
     try {
       const brand = await this.prismaService.brand.findFirst({
-        where: { ownerId: id },
+        where: { ownerId },
       });
-      const copyDto: savedHopCreationDto = JSON.parse(JSON.stringify(dto)); //shallowCopy
-      delete copyDto.products;
-      delete copyDto.publish;
+      const updateData: savedHopCreationDto = JSON.parse(JSON.stringify(dto)); //shallowCopy
+      delete updateData.products;
+      delete updateData.publish;
+
       const hop = await this.prismaService.savedWeb.update({
-        where: {
-          id: Number(savedHopId),
-          ownerId: id,
-        },
-        data: {
-          ...copyDto,
-        },
+        where: { id: Number(savedHopId), ownerId },
+        data: updateData,
       });
-
-      await this.updatePublishedHops(dto, id, id, brand);
-
+      await this.updatePublishedHops(dto, ownerId, brand.id, brand);
       await this.prismaService.products.deleteMany({
-        where: {
-          hopId: Number(savedHopId),
-        },
+        where: { hopId: Number(savedHopId) },
       });
-      const products = dto?.products.map((product) => {
-        return this.prismaService.products.create({
-          data: {
-            ...product,
-            owner: {
-              connect: { id: brand.ownerId },
+
+      if (dto.products?.length) {
+        const productPromises = dto.products.map((product) =>
+          this.prismaService.products.create({
+            data: {
+              ...product,
+              owner: {
+                connect: { id: brand.ownerId },
+              },
+              brand: {
+                connect: { id: brand.id },
+              },
+              hop: {
+                connect: { id: Number(savedHopId) },
+              },
             },
-            brand: {
-              connect: { id: brand.id },
-            },
-            hop: {
-              connect: { id: Number(savedHopId) },
-            },
-          },
-        });
-      });
-      await Promise.all(products);
-      return hop;
-    } catch (e) {
-      console.log(e);
-      throw new HttpException(
-        "Internal Server Error",
-        HttpStatus.INTERNAL_SERVER_ERROR
+          })
+        );
+        await Promise.all(productPromises);
+      }
+
+      return this.utility.createSuccessResponse(hop);
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to save hop",
+        "Unable to save the hop. Please try again later."
       );
     }
   }
 
-  // utility functions
-  updatePublishedHops = async (
+  async updatePublishedHops(
     dto: savedHopCreationDto,
     ownerId: number,
     brandId: number,
     brand: brandCreationDto
-  ) => {
+  ): Promise<APIResponse> {
     try {
       if (dto.publish) {
-        const isAlreadyPublished =
+        const existingPublished =
           await this.prismaService.releasedWeb.findFirst({
-            where: {
-              ownerId,
-              brandId,
-            },
+            where: { ownerId, brandId },
           });
-        if (isAlreadyPublished) {
+
+        if (existingPublished) {
           await this.prismaService.releasedWeb.delete({
-            where: {
-              ownerId,
-              brandId,
-            },
+            where: { id: existingPublished.id },
           });
         }
+
         await this.prismaService.releasedWeb.create({
           data: {
-            blueprint: dto?.blueprint || initiateHop(brand),
-            name: dto?.name || "Untitled",
-            owner: {
-              connect: { id: ownerId },
-            },
-            brand: {
-              connect: { id: brandId },
-            },
+            blueprint: dto.blueprint || initiateHop(brand),
+            name: dto.name || "Untitled",
+            owner: { connect: { id: ownerId } },
+            brand: { connect: { id: brandId } },
           },
         });
       }
-    } catch (e) {
-      console.log(e);
-      throw HttpStatus.INTERNAL_SERVER_ERROR;
+      return this.utility.createSuccessResponse({
+        message: "Published hops updated successfully",
+      });
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Failed to update published hops",
+        "Unable to update published hops. Please try again later."
+      );
     }
-  };
+  }
 }

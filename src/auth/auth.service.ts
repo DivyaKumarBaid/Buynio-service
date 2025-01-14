@@ -1,9 +1,11 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as argon from "argon2";
 import { OAuth2Client } from "google-auth-library";
+import * as jwt from "jsonwebtoken";
 import { MailService } from "src/mail/mail.service";
 import { PrismaService } from "src/prisma/prisma.service";
+import { APIResponse } from "src/types/api.types";
 import {
   Instagram_Jwt_Payload,
   Unverified_User_Type,
@@ -17,328 +19,360 @@ import {
   SigninThirdPartyAuthDto,
   SignupAuthDto,
 } from "./dto";
-import * as jwt from "jsonwebtoken";
 
 @Injectable()
 export class AuthService {
-  private admin: any;
+  private googleClient: OAuth2Client;
+
   constructor(
     private prismaService: PrismaService,
     private utility: UtilService,
     private mailer: MailService,
     private config: ConfigService
   ) {
-    this.admin = new OAuth2Client({
+    this.googleClient = new OAuth2Client({
       clientId: this.config.get("GOOGLE_CLIENT_ID"),
-    }); // GOOGLE_CLIENT_ID must be same as frontend
+    });
+  }
+
+  private async fetchUserWithMinimalFields(email: string) {
+    return this.prismaService.users.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        password: true,
+        hashRT: true,
+        brand: true,
+      },
+    });
+  }
+
+  private async fetchUnverifiedUser(email: string) {
+    return this.prismaService.unverified_Users.findUnique({ where: { email } });
   }
 
   async updateRtHash(userId: number, rt: string) {
     const hash = await this.utility.hashData(rt);
     await this.prismaService.users.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        hashRT: hash,
-      },
+      where: { id: userId },
+      data: { hashRT: hash },
     });
   }
-  async updateOtp(userId: number) {
-    const otp = await this.utility.generateOtp();
-    const hashedOtp = await this.utility.hashData(String(otp));
-    const user = await this.prismaService.unverified_Users.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        otp: hashedOtp,
-      },
-    });
-    delete user.otp;
-    return { ...user, otp: String(otp) };
+
+  async updateOtp(userId: number): Promise<APIResponse> {
+    try {
+      const otp = String(await this.utility.generateOtp());
+      const hashedOtp = await this.utility.hashData(otp);
+      const user = await this.prismaService.unverified_Users.update({
+        where: { id: userId },
+        data: { otp: hashedOtp },
+      });
+      return this.utility.createSuccessResponse({ ...user, otp });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Error updating OTP",
+        "Failed to update OTP"
+      );
+    }
   }
 
   async signupLocal(dto: SignupAuthDto) {
-    let user: Unverified_User_Type, otp: string;
+    try {
+      const preExist = await this.fetchUserWithMinimalFields(dto.email);
+      if (preExist)
+        return this.utility.createErrorResponse(
+          "User already exists",
+          "Account with this email already exists"
+        );
 
-    // if user already exist in as verified user
-    const preExist = await this.prismaService.users.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
-    if (preExist) throw new HttpException("Already Exist", HttpStatus.CONFLICT);
-    const reSend = await this.prismaService.unverified_Users.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
-    if (reSend) {
-      user = await this.updateOtp(reSend.id);
-      otp = user.otp;
-    } else {
-      const hash = await this.utility.hashData(dto.password);
-      otp = String(await this.utility.generateOtp());
-      const hashedOtp = await this.utility.hashData(String(otp));
-      user = await this.prismaService.unverified_Users.create({
-        data: {
-          email: dto.email,
-          password: hash,
-          username: dto.username,
-          otp: hashedOtp,
-        },
-      });
+      const reSend = await this.fetchUnverifiedUser(dto.email);
+      let user: Unverified_User_Type;
+      let otp: string;
+
+      if (reSend) {
+        const result = await this.updateOtp(reSend.id);
+        if (result.error) return result;
+        if (result.error == false) {
+          user = result.response as Unverified_User_Type;
+          otp = user.otp;
+        }
+      } else {
+        const hash = await this.utility.hashData(dto.password);
+        otp = String(await this.utility.generateOtp());
+        const hashedOtp = await this.utility.hashData(otp);
+        user = await this.prismaService.unverified_Users.create({
+          data: {
+            email: dto.email,
+            password: hash,
+            username: dto.username,
+            otp: hashedOtp,
+          },
+        });
+      }
+
+      delete user.password;
+      delete user.otp;
+      await this.mailer.sendUserConfirmation(user.email, user.username, otp);
+
+      return this.utility.createSuccessResponse(user);
+    } catch {
+      return this.utility.createErrorResponse(
+        "Signup failed",
+        "Unable to register user"
+      );
     }
-
-    // user is added to a temp db as unverified and will be tranferred to verified
-
-    // call mail service and send otp
-    delete user.password;
-    delete user.otp;
-
-    await this.mailer.sendUserConfirmation(user.email, user.username, otp);
-    return user;
   }
 
   async verifyLocal(dto: OTPAuthDto) {
-    const user = await this.prismaService.unverified_Users.findUnique({
-      where: {
-        id: +dto.id,
-      },
-    });
-    if (!user) return false;
-    const otpMatch = await argon.verify(user.otp, dto.otp);
-    if (otpMatch) {
+    try {
+      const user = await this.prismaService.unverified_Users.findUnique({
+        where: { id: +dto.id },
+      });
+      if (!user)
+        return this.utility.createErrorResponse(
+          "User not found",
+          "Invalid user ID"
+        );
+
+      if (!(await argon.verify(user.otp, dto.otp)))
+        return this.utility.createErrorResponse(
+          "Invalid OTP",
+          "The OTP is incorrect"
+        );
+
       delete user.otp;
       delete user.id;
       const newUser = await this.prismaService.users.create({
         data: { ...user },
       });
       await this.prismaService.unverified_Users.delete({
-        where: {
-          email: user.email,
-        },
+        where: { email: user.email },
       });
-      if (newUser) return true;
-      return false;
-    } else return false;
+
+      return this.utility.createSuccessResponse(newUser);
+    } catch {
+      return this.utility.createErrorResponse(
+        "Verification failed",
+        "Unable to verify user"
+      );
+    }
   }
 
   async changePassword(dto: PasswordAuthDto) {
     try {
       await this.prismaService.passwordOtp.delete({
-        where: {
+        where: { user_mail: dto.email },
+      });
+
+      const user = await this.fetchUserWithMinimalFields(dto.email);
+      if (!user)
+        return this.utility.createErrorResponse(
+          "User not found",
+          "Invalid email address"
+        );
+
+      const otp = String(await this.utility.generateOtp());
+      await this.mailer.sendUserConfirmation(user.email, user.username, otp);
+      await this.prismaService.passwordOtp.create({
+        data: {
           user_mail: dto.email,
+          hashOtp: await this.utility.hashData(otp),
         },
       });
-    } catch (err) {
-      return;
+
+      return this.utility.createSuccessResponse({ message: "Email sent" });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Change password failed",
+        "Unable to process request"
+      );
     }
-
-    const user = await this.prismaService.users.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
-    if (!user) throw new HttpException("Not Found", HttpStatus.NOT_FOUND);
-
-    const otp = String(await this.utility.generateOtp());
-    const hashOtp = await this.utility.hashData(otp);
-
-    // create a reln table to store user vs otp
-    await this.mailer.sendUserConfirmation(user.email, user.username, otp);
-
-    const newPassOtp = await this.prismaService.passwordOtp.create({
-      data: {
-        user_mail: dto.email,
-        hashOtp,
-      },
-    });
-
-    if (!newPassOtp)
-      if (!user) throw new HttpException("Not Found", HttpStatus.NOT_FOUND);
-
-    return {
-      message: "Email Sent",
-    };
   }
 
   async verifyPasswordChange(dto: OtpPasswordDto) {
-    const passOtp = await this.prismaService.passwordOtp.findUnique({
-      where: {
-        user_mail: dto.email,
-      },
-    });
-    const isOtp = await argon.verify(passOtp.hashOtp, dto.otp);
-    if (!isOtp)
-      throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+    try {
+      const passOtp = await this.prismaService.passwordOtp.findUnique({
+        where: { user_mail: dto.email },
+      });
+      if (!passOtp || !(await argon.verify(passOtp.hashOtp, dto.otp)))
+        return this.utility.createErrorResponse("Unauthorized", "Invalid OTP");
 
-    const password = await argon.hash(dto.password);
-    const user = await this.prismaService.users.update({
-      where: {
-        email: dto.email,
-      },
-      data: {
-        password,
-      },
-    });
-    if (!user)
-      throw new HttpException(
-        "Internal Server Error",
-        HttpStatus.INTERNAL_SERVER_ERROR
+      await this.prismaService.users.update({
+        where: { email: dto.email },
+        data: { password: await argon.hash(dto.password) },
+      });
+      await this.prismaService.passwordOtp.delete({
+        where: { id: passOtp.id },
+      });
+
+      return this.utility.createSuccessResponse({
+        message: "Password updated successfully",
+      });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Verification failed",
+        "Unable to verify OTP"
       );
-    await this.prismaService.passwordOtp.delete({
-      where: {
-        id: passOtp.id,
-      },
-    });
+    }
   }
 
   async localLogin(dto: SigninAuthDto) {
-    // find user and if not present throw error
-    const user = await this.prismaService.users.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
-    if (!user) throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
-
-    // verify user's password
-    const isUser = await argon.verify(user.password, dto.password);
-    if (!isUser) throw new HttpException("Forbidden", HttpStatus.FORBIDDEN);
-
-    const tokens = await this.utility.getToken(user.id, user.email);
-    await this.updateRtHash(user.id, tokens.refresh_token);
-    delete user.hashRT;
-    delete user.password;
-    return { ...tokens, ...user };
-  }
-
-  async instagramLogin(dto: SigninThirdPartyAuthDto) {
     try {
-      const ticket = jwt.verify(
-        dto.token,
-        this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
-      );
-
-      const decodedToken = ticket as Instagram_Jwt_Payload;
-      console.log(decodedToken);
-      let user = await this.prismaService.users.findUnique({
-        where: {
-          email: decodedToken.data.username,
-        },
-        include: { brand: true },
-      });
-
-      // if user doesnt exist create one
-      if (!user) {
-        const token = jwt.sign(
-          decodedToken.data.access_token,
-          this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
+      const user = await this.fetchUserWithMinimalFields(dto.email);
+      if (!user || !(await argon.verify(user.password, dto.password)))
+        return this.utility.createErrorResponse(
+          "Forbidden",
+          "Invalid credentials"
         );
-        const newUserObject = {
-          email: decodedToken.data.username, // for instagram login email isnt there
-          username: decodedToken.data.name,
-          signInMethod: "instagram.com",
-          password: await this.utility.hashData(dto.token),
-          isInstagramLinked: true,
-          instagramAccessToken: token,
-          instagramId: decodedToken.data.user_id.toString(),
-        };
-        user = await this.prismaService.users.create({
-          data: newUserObject,
-          include: { brand: true },
-        });
-      }
+
       const tokens = await this.utility.getToken(user.id, user.email);
       await this.updateRtHash(user.id, tokens.refresh_token);
-
-      // delete stuff to return user
       delete user.hashRT;
       delete user.password;
 
-      return { ...tokens, ...user };
-    } catch (error) {
-      console.error("Instagram sign-in error:", error);
-      throw new Error("Instagram sign-in failed");
+      return this.utility.createSuccessResponse({ ...tokens, ...user });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Login failed",
+        "Unable to login user"
+      );
     }
   }
 
   async googleLogin(dto: SigninThirdPartyAuthDto) {
     try {
-      const ticket = await this.admin.verifyIdToken({
-        idToken: dto.token,
-        audience: this.config.get("GOOGLE_CLIENT_ID"),
-      });
-      const decodedToken = ticket.getPayload();
-      let user = await this.prismaService.users.findUnique({
-        where: {
-          email: decodedToken.email,
-        },
-        include: { brand: true },
-      });
+      const decodedToken = (
+        await this.googleClient.verifyIdToken({
+          idToken: dto.token,
+          audience: this.config.get("GOOGLE_CLIENT_ID"),
+        })
+      ).getPayload();
 
-      // if user doesnt exist create one
+      let user = await this.fetchUserWithMinimalFields(decodedToken.email);
+
       if (!user) {
-        const newUserObject = {
+        const newUser = {
           email: decodedToken.email,
           username: decodedToken.name,
           signInMethod: "google.com",
           password: await this.utility.hashData(dto.token),
         };
         user = await this.prismaService.users.create({
-          data: newUserObject,
+          data: newUser,
           include: { brand: true },
         });
       }
+
       const tokens = await this.utility.getToken(user.id, user.email);
       await this.updateRtHash(user.id, tokens.refresh_token);
-
-      // delete stuff to return user
       delete user.hashRT;
       delete user.password;
 
-      return { ...tokens, ...user };
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      throw new Error("Google sign-in failed");
+      return this.utility.createSuccessResponse({ ...tokens, ...user });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Google sign-in failed",
+        "Unable to sign in with Google"
+      );
+    }
+  }
+
+  async instagramLogin(dto: SigninThirdPartyAuthDto) {
+    try {
+      const decodedToken = jwt.verify(
+        dto.token,
+        this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
+      ) as Instagram_Jwt_Payload;
+
+      let user = await this.fetchUserWithMinimalFields(
+        decodedToken.data.username
+      );
+
+      if (!user) {
+        const newUser = {
+          email: decodedToken.data.username,
+          username: decodedToken.data.name,
+          signInMethod: "instagram.com",
+          password: await this.utility.hashData(dto.token),
+          isInstagramLinked: true,
+          instagramAccessToken: jwt.sign(
+            decodedToken.data.access_token,
+            this.config.get("INSTAGRAM_AUTH_TOKEN_SECRET")
+          ),
+          instagramId: decodedToken.data.user_id.toString(),
+        };
+        user = await this.prismaService.users.create({
+          data: newUser,
+          include: { brand: true },
+        });
+      }
+
+      const tokens = await this.utility.getToken(user.id, user.email);
+      await this.updateRtHash(user.id, tokens.refresh_token);
+      delete user.hashRT;
+      delete user.password;
+
+      return this.utility.createSuccessResponse({ ...tokens, ...user });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Instagram sign-in failed",
+        "Unable to sign in with Instagram"
+      );
     }
   }
 
   async logout(id: number) {
-    await this.prismaService.users.updateMany({
-      where: {
-        id: id,
-        hashRT: {
-          not: null,
-        },
-      },
-      data: {
-        hashRT: null,
-      },
-    });
+    try {
+      await this.prismaService.users.updateMany({
+        where: { id, hashRT: { not: null } },
+        data: { hashRT: null },
+      });
+      return this.utility.createSuccessResponse({
+        message: "Logged out successfully",
+      });
+    } catch {
+      return this.utility.createErrorResponse(
+        "Logout failed",
+        "Unable to logout user"
+      );
+    }
   }
 
   async refreshToken(id: number, rt: string) {
-    const user = await this.prismaService.users.findUnique({
-      where: {
-        id,
-      },
-    });
-    if (!user)
-      throw new HttpException("Unauthorized1", HttpStatus.UNAUTHORIZED);
+    try {
+      const user = await this.prismaService.users.findUnique({
+        where: { id },
+        select: { hashRT: true, email: true },
+      });
+      if (!user || !(await argon.verify(user.hashRT, rt)))
+        return this.utility.createErrorResponse(
+          "Unauthorized",
+          "Invalid refresh token"
+        );
 
-    const Validity = await argon.verify(user.hashRT, rt);
-    if (!Validity)
-      throw new HttpException("Unauthorized2", HttpStatus.UNAUTHORIZED);
-
-    const tokens = await this.utility.getToken(user.id, user.email);
-    await this.updateRtHash(user.id, tokens.refresh_token);
-    return tokens;
+      const tokens = await this.utility.getToken(id, user.email);
+      await this.updateRtHash(id, tokens.refresh_token);
+      return this.utility.createSuccessResponse(tokens);
+    } catch {
+      return this.utility.createErrorResponse(
+        "Token refresh failed",
+        "Unable to refresh token"
+      );
+    }
   }
 
   async getPayload(access_token: string) {
-    return this.utility.getPayload(access_token);
+    try {
+      return this.utility.createSuccessResponse(
+        await this.utility.getPayload(access_token)
+      );
+    } catch {
+      return this.utility.createErrorResponse(
+        "Invalid token",
+        "Unable to decode token"
+      );
+    }
   }
 }
