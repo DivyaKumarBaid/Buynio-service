@@ -1,6 +1,6 @@
 # Buynio Backend
 
-The **Buynio Backend** is the powerful server-side engine behind [Buynio](https://yourfrontendlink.com/), a Next.js-based website builder for creating business landing pages.
+The **Buynio Backend** is the powerful server-side engine behind [Buynio](https://github.com/DivyaKumarBaid/Buynio), a Next.js-based website builder for creating business landing pages.
 
 Built with [NestJS](https://nestjs.com/) and [Prisma ORM](https://www.prisma.io/), this backend provides authentication, user management, project storage, and API services to power a seamless website-building experience.
 
