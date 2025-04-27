@@ -24,11 +24,9 @@ export class HopsController {
     return await this.hopsService.getAllHops(user["sub"], page || "0");
   }
 
-  @UseGuards(AuthGuard("jwt"))
   @Get("all/published")
-  async getAllPublishedHops(@Req() req: Request, @Query("page") page?: string) {
-    const user = req.user;
-    return await this.hopsService.getAllPublishedHops(user["sub"], page || "0");
+  async getAllPublishedHops(@Query("page") page?: string) {
+    return await this.hopsService.getAllPublishedHops(page || "0");
   }
 
   @Get("published/:link")
@@ -49,6 +47,11 @@ export class HopsController {
   async getAllSavedHops(@Req() req: Request, @Query("page") page?: string) {
     const user = req.user;
     return await this.hopsService.getAllSavedHops(user["sub"], page || "0");
+  }
+
+  @Get("check-link")
+  async checkLink(@Req() req: Request, @Query("link") link: string) {
+    return this.hopsService.checkLink(link);
   }
 
   // get single saved hop

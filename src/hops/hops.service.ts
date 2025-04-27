@@ -17,6 +17,27 @@ export class HopsService {
     private config: ConfigService
   ) {}
 
+  async checkLink(link: string): Promise<APIResponse> {
+    if (link?.trim() == "") {
+      return this.utility.createErrorResponse(
+        "Link query parameter is required",
+        "Unable to fetch link. Please try again later."
+      );
+    }
+    try {
+      const brand = await this.prismaService.brand.findUnique({
+        where: { link },
+        select: { id: true },
+      });
+      return this.utility.createSuccessResponse({ exists: !!brand });
+    } catch (error) {
+      return this.utility.createErrorResponse(
+        error.message || "Database query failed",
+        "Unable to fetch hops. Please try again later."
+      );
+    }
+  }
+
   async getAllHops(ownerId: number, pg: string): Promise<APIResponse> {
     try {
       const page = Number(pg);
@@ -28,8 +49,12 @@ export class HopsService {
         take: 15,
         skip: page * pageIndex,
       });
+      const releasedHop = await this.prismaService.releasedWeb.findFirst({
+        where: { ownerId },
+      });
       return this.utility.createSuccessResponse({
         hops,
+        releasedHop,
         meta: {
           count,
           currentPage: page,
@@ -44,7 +69,7 @@ export class HopsService {
     }
   }
 
-  async getAllPublishedHops(id: number, pg: string): Promise<APIResponse> {
+  async getAllPublishedHops(pg: string): Promise<APIResponse> {
     try {
       const page = Number(pg);
       const count = await this.prismaService.releasedWeb.count();
@@ -257,19 +282,25 @@ export class HopsService {
           });
 
         if (existingPublished) {
-          await this.prismaService.releasedWeb.delete({
+          await this.prismaService.releasedWeb.update({
             where: { id: existingPublished.id },
+            data: {
+              blueprint: dto.blueprint || initiateHop(brand),
+              name: dto.name || "Untitled",
+              owner: { connect: { id: ownerId } },
+              brand: { connect: { id: brandId } },
+            },
+          });
+        } else {
+          await this.prismaService.releasedWeb.create({
+            data: {
+              blueprint: dto.blueprint || initiateHop(brand),
+              name: dto.name || "Untitled",
+              owner: { connect: { id: ownerId } },
+              brand: { connect: { id: brandId } },
+            },
           });
         }
-
-        await this.prismaService.releasedWeb.create({
-          data: {
-            blueprint: dto.blueprint || initiateHop(brand),
-            name: dto.name || "Untitled",
-            owner: { connect: { id: ownerId } },
-            brand: { connect: { id: brandId } },
-          },
-        });
       }
       return this.utility.createSuccessResponse({
         message: "Published hops updated successfully",
