@@ -1,23 +1,38 @@
-# Auth using JWT in NESTJS
-This is a micro service that contains basic auth 
+# Buynio Backend
 
-## Introduction
-This is a microservice built in nestjs as a base for authentication template. This microservice uses JWT tokens (access and refresh tokens)
+The **Buynio Backend** is the powerful server-side engine behind [Buynio](https://yourfrontendlink.com/), a Next.js-based website builder for creating business landing pages.
 
-#### Tech Stack
-- NestJs
-- Postgres
-- Docker
-- Prisma
+Built with [NestJS](https://nestjs.com/) and [Prisma ORM](https://www.prisma.io/), this backend provides authentication, user management, project storage, and API services to power a seamless website-building experience.
 
-## Working around
-Development Server : 
-- Clone the repo
+<!-- Upload your backend image here -->
+
+## Features
+
+- 🚀 High-performance server built with NestJS
+- 🛠️ Database management using Prisma ORM
+- 🔒 OAuth login with Google and Instagram
+- 🗂️ User project creation and management APIs
+- 📊 Scalable architecture ready for production
+- ⚙️ Environment-based configuration
+- ✨ Type-safe and clean code structure
+
+## Tech Stack
+
+- **NestJS** — Progressive Node.js framework
+- **Prisma** — Modern database toolkit
+- **PostgreSQL** (recommended) — For production-grade database
+- **JWT** — For session management and authorization
+- **OAuth** — For social login (Google and Instagram)
+
+## Getting Started
+
+Clone the repository:
 - `npm install`
 - `docker compose up -d`
 - `npx prisma migrate dev`
 - `npx prisma db push`
 - `npm run start:dev`
+
 
 ### WorkFlow
 - User will Sign-up either by email or by google
@@ -46,3 +61,14 @@ Development Server :
 
 ### Postman
 [Title](Auth_base_template.postman_collection.json) contains all the routes required with example
+
+
+## Deployment
+
+- Works well with **Docker**, **Render**, **AWS**, and **Heroku**.
+- Make sure to set production environment variables correctly.
+
+
+## License
+
+This project is licensed under the MIT License.
